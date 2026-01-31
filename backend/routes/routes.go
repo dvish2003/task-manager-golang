@@ -41,8 +41,44 @@ func RegisterRoutes(r *gin.Engine){
 	})
 	
 	//create User
+	r.POST("/api/user/saveUser",func(c *gin.Context) {
+		var user models.User
+		c.BindJSON(&user)
+		fmt.Println("Saving user:", user.Name)
+		config.DB.Collection("users").InsertOne(
+			context.TODO(),user)
+			//send message
+			c.JSON(http.StatusOK, gin.H{"message": "User saved successfully"})
+	})
 	//getUserByEmail
+	r.GET("/api/user/getUserByEmail/:email", func(c *gin.Context) {
+		email := c.Param("email")
+		var result models.User
+		errorFetch := config.DB.Collection("users").FindOne(
+			context.TODO(),
+			gin.H{"email": email},
+		).Decode(&result)
+
+		if errorFetch != nil {
+			c.JSON(http.StatusNotFound, gin.H{"message": "User not found"})
+			return
+		}
+		c.JSON(http.StatusOK, result)
+	})
 	//getAll Users
+	r.GET("/api/user/getAllUsers", func(c *gin.Context) {
+		cursor, err := config.DB.Collection("users").Find(context.TODO(), gin.H{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error fetching users"})
+			return
+		}
+		var users []models.User
+		if err = cursor.All(context.TODO(), &users); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"message": "Error decoding users"})
+			return
+		}
+		c.JSON(http.StatusOK, users)
+	})
 
 
 	//create Task
